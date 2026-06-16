@@ -1,0 +1,10 @@
+﻿__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+data/diamonds.csv
+data/diamonds_clean_featured.csv
+data/diamonds_processed_clustered.csv
+*.h5
+*.keras
