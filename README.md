@@ -52,32 +52,45 @@ This project is designed to look strong from every angle:
 
 ## 📸 App Screenshots
 
-> Save screenshots from the Streamlit app into the `screenshots/` folder after running the project.
+## Application Screenshots
 
 ### 1. Home Dashboard
-`screenshots/home_dashboard.png`
+
+![Home Dashboard](screenshots/home_dashboard.png)
 
 ### 2. EDA Dashboard
-`screenshots/eda_dashboard.png`
-`screenshots/eda_dashboard_1.png`
-`screenshots/eda_dashboard_2.png`
+
+![EDA Dashboard](screenshots/eda_dashboard.png)
+
+![EDA Dashboard - View 2](screenshots/eda_dashboard_1.png)
+
+![EDA Dashboard - View 3](screenshots/eda_dashboard_2.png)
 
 ### 3. Model Performance
-`screenshots/model_performance.png`
-`screenshots/model_performance_1.png`
-`screenshots/model_performance_2.png`
+
+![Model Performance](screenshots/model_performance.png)
+
+![Model Performance - View 2](screenshots/model_performance_1.png)
+
+![Model Performance - View 3](screenshots/model_performance_2.png)
 
 ### 4. Price Predictor
-`screenshots/price_predictor.png`
-`screenshots/price_predictor_1.png`
+
+![Price Predictor](screenshots/price_predictor.png)
+
+![Price Predictor - Result](screenshots/price_predictor_1.png)
 
 ### 5. Market Segment Predictor
-`screenshots/market_segment.png`
-`screenshots/market_segment_1.png`
+
+![Market Segment Predictor](screenshots/market_segment.png)
+
+![Market Segment Predictor - Result](screenshots/market_segment_1.png)
 
 ### 6. Cluster Insights
-`screenshots/cluster_insights.png`
-`screenshots/cluster_insights_1.png`
+
+![Cluster Insights](screenshots/cluster_insights.png)
+
+![Cluster Insights - View 2](screenshots/cluster_insights_1.png)
 ---
 
 ## 🏗️ Project Architecture
@@ -306,7 +319,7 @@ KMeans clustering is used to group diamonds into commercial segments using physi
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/diamond-dynamics.git
+git clone https://github.com/ps-learner/diamond-dynamics.git
 cd diamond-dynamics
 ```
 
