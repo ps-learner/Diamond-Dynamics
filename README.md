@@ -59,18 +59,25 @@ This project is designed to look strong from every angle:
 
 ### 2. EDA Dashboard
 `screenshots/eda_dashboard.png`
+`screenshots/eda_dashboard_1.png`
+`screenshots/eda_dashboard_2.png`
 
 ### 3. Model Performance
 `screenshots/model_performance.png`
+`screenshots/model_performance_1.png`
+`screenshots/model_performance_2.png`
 
 ### 4. Price Predictor
 `screenshots/price_predictor.png`
+`screenshots/price_predictor_1.png`
 
 ### 5. Market Segment Predictor
 `screenshots/market_segment.png`
+`screenshots/market_segment_1.png`
 
 ### 6. Cluster Insights
 `screenshots/cluster_insights.png`
+`screenshots/cluster_insights_1.png`
 ---
 
 ## 🏗️ Project Architecture
