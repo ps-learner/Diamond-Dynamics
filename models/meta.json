@@ -1,0 +1,137 @@
+{
+  "best_regression_model": "XGBoost",
+  "best_model_artifact_name": "best_xgboost_model.json",
+  "best_model_format": "xgboost_json",
+  "regression_metrics": {
+    "R2": 0.9821,
+    "RMSE_inr": 28856.62,
+    "MAE_inr": 16465.07,
+    "MAPE": 6.2
+  },
+  "ann_metrics": {
+    "R2": 0.8452,
+    "RMSE_inr": 84888.27,
+    "MAE_inr": 49516.43,
+    "MAPE": 15.53
+  },
+  "clustering": {
+    "optimal_k": 4,
+    "silhouette_score": 0.2496,
+    "cluster_names": {
+      "0": "⚖️ Mid-Range Balanced Diamonds",
+      "1": "🪨 Affordable Small Diamonds",
+      "2": "💎 Premium Heavy Diamonds",
+      "3": "✨ Quality Light Diamonds"
+    }
+  },
+  "selected_features": [
+    "y",
+    "carat",
+    "surface_area",
+    "volume",
+    "clarity_enc",
+    "color_enc",
+    "x"
+  ],
+  "cluster_features": [
+    "carat",
+    "cut_enc",
+    "color_enc",
+    "clarity_enc",
+    "depth",
+    "table",
+    "x",
+    "y",
+    "z",
+    "volume",
+    "dimension_ratio",
+    "surface_area",
+    "is_premium"
+  ],
+  "usd_to_inr": 83.5,
+  "total_diamonds": 49513,
+  "cut_order": [
+    "Fair",
+    "Good",
+    "Very Good",
+    "Premium",
+    "Ideal"
+  ],
+  "color_order": [
+    "J",
+    "I",
+    "H",
+    "G",
+    "F",
+    "E",
+    "D"
+  ],
+  "clarity_order": [
+    "I1",
+    "SI2",
+    "SI1",
+    "VS2",
+    "VS1",
+    "VVS2",
+    "VVS1",
+    "IF"
+  ],
+  "regression_results": [
+    {
+      "Model": "XGBoost",
+      "MAE": 16465.069389287022,
+      "MSE": 832704451.3700094,
+      "RMSE": 28856.618848541653,
+      "R2": 0.982114535363659,
+      "MAPE": 6.2024665688257565
+    },
+    {
+      "Model": "Random Forest",
+      "MAE": 16823.626808543107,
+      "MSE": 891646143.8574315,
+      "RMSE": 29860.444468517737,
+      "R2": 0.9808485405021502,
+      "MAPE": 6.421326614893368
+    },
+    {
+      "Model": "KNN",
+      "MAE": 17834.551088247987,
+      "MSE": 1001682697.0249983,
+      "RMSE": 31649.371194780448,
+      "R2": 0.9784850910488113,
+      "MAPE": 6.809797154334782
+    },
+    {
+      "Model": "Decision Tree",
+      "MAE": 20223.901866288976,
+      "MSE": 1160767818.8194766,
+      "RMSE": 34070.04283559791,
+      "R2": 0.9750681388332421,
+      "MAPE": 8.594347894023315
+    },
+    {
+      "Model": "Linear Regression",
+      "MAE": 26466.408742408676,
+      "MSE": 1931963354.3696315,
+      "RMSE": 43954.10509121567,
+      "R2": 0.9585038098494194,
+      "MAPE": 10.805094292398913
+    },
+    {
+      "Model": "Ridge Regression",
+      "MAE": 26651.153275325716,
+      "MSE": 1968498166.8246508,
+      "RMSE": 44367.76044409556,
+      "R2": 0.9577190871364754,
+      "MAPE": 10.838791846943113
+    },
+    {
+      "Model": "ANN",
+      "MAE": 49516.433484289795,
+      "MSE": 7206018301.444081,
+      "RMSE": 84888.26951613562,
+      "R2": 0.8452236141079117,
+      "MAPE": 15.527600786060116
+    }
+  ]
+}

@@ -239,14 +239,13 @@ The project creates business-aware and geometry-aware features to improve predic
 |---|---|---|---|
 | 1 | `price_inr` | USD to INR conversion using 83.5 | Makes predictions market-ready for Indian pricing |
 | 2 | `volume` | `x * y * z` | Physical size proxy |
-| 3 | `price_per_carat` | `price / carat` | Value efficiency metric |
-| 4 | `dimension_ratio` | `(x + y) / (2*z)` | Shape/proportion indicator |
-| 5 | `carat_category` | Light / Medium / Heavy | Commercial segmentation label |
-| 6 | `surface_area` | Surface area proxy from dimensions | Enhanced geometry representation |
-| 7 | `depth_table_ratio` | `depth / table` | Approximate cut-proportion signal |
-| 8 | `lw_ratio` | `x / y` | Symmetry indicator |
-| 9 | `is_premium` | Ideal + D/E + IF/VVS | Premium luxury flag |
-| 10 | `log_price` / `log_price_inr` | Log-transformed target | Stabilizes skew for regression |
+| 3 | `dimension_ratio` | `(x + y) / (2*z)` | Shape/proportion indicator |
+| 4 | `carat_category` | Light / Medium / Heavy | Commercial segmentation label |
+| 5 | `surface_area` | Surface area proxy from dimensions | Enhanced geometry representation |
+| 6 | `depth_table_ratio` | `depth / table` | Approximate cut-proportion signal |
+| 7 | `lw_ratio` | `x / y` | Symmetry indicator |
+| 8 | `is_premium` | Ideal + D/E + IF/VVS | Premium luxury flag |
+| 9 | `log_price` / `log_price_inr` | Log-transformed target | Stabilizes skew for regression |
 
 ---
 

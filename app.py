@@ -8,6 +8,8 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 
+from xgboost import XGBRegressor
+
 st.set_page_config(
     page_title="💎 Diamond Dynamics",
     page_icon="💎",
@@ -186,27 +188,24 @@ def build_feature_row(carat, cut, color, clarity, depth, table, x, y, z):
     premium_color = color in ["D", "E"]
     premium_clarity = clarity in ["IF", "VVS1", "VVS2"]
     is_premium = int(premium_cut and premium_color and premium_clarity)
-    price_per_carat_proxy = 0
 
     return {
-        "carat": carat,
+        "carat": float(carat),
         "cut": cut,
         "color": color,
         "clarity": clarity,
-        "depth": depth,
-        "table": table,
-        "x": x,
-        "y": y,
-        "z": z,
-        "volume": volume,
-        "price_per_carat": price_per_carat_proxy,
-        "dimension_ratio": dimension_ratio,
-        "surface_area": surface_area,
-        "depth_table_ratio": depth_table_ratio,
-        "lw_ratio": lw_ratio,
-        "is_premium": is_premium,
+        "depth": float(depth),
+        "table": float(table),
+        "x": float(x),
+        "y": float(y),
+        "z": float(z),
+        "volume": float(volume),
+        "dimension_ratio": float(dimension_ratio),
+        "surface_area": float(surface_area),
+        "depth_table_ratio": float(depth_table_ratio),
+        "lw_ratio": float(lw_ratio),
+        "is_premium": int(is_premium),
     }
-
 
 def assign_price_tier(price_inr):
     if price_inr < 150000:
@@ -308,19 +307,40 @@ def load_dataset_for_app():
 
 @st.cache_resource
 def load_artifacts():
-    regression_model = joblib.load(os.path.join(MODELS_DIR, "best_regression_model.pkl")) if safe_exists(os.path.join(MODELS_DIR, "best_regression_model.pkl")) else None
+    regression_model = None
+    best_model_path = os.path.join(MODELS_DIR, "best_regression_model.pkl")
+    xgb_json_path = os.path.join(MODELS_DIR, "best_xgboost_model.json")
+
+    meta = {}
+    meta_path = os.path.join(MODELS_DIR, "meta.json")
+    if safe_exists(meta_path):
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+
+    best_model_name = meta.get("best_regression_model", "")
+    best_model_format = meta.get("best_model_format", "")
+
+    if best_model_name == "XGBoost" and best_model_format == "xgboost_json" and safe_exists(xgb_json_path):
+        from xgboost import XGBRegressor
+        regression_model = XGBRegressor()
+        regression_model.load_model(xgb_json_path)
+    elif safe_exists(best_model_path):
+        regression_model = joblib.load(best_model_path)
+
     kmeans_model = joblib.load(os.path.join(MODELS_DIR, "kmeans_model.pkl")) if safe_exists(os.path.join(MODELS_DIR, "kmeans_model.pkl")) else None
     scaler_reg = joblib.load(os.path.join(MODELS_DIR, "scaler_regression.pkl")) if safe_exists(os.path.join(MODELS_DIR, "scaler_regression.pkl")) else None
     scaler_clus = joblib.load(os.path.join(MODELS_DIR, "scaler_clustering.pkl")) if safe_exists(os.path.join(MODELS_DIR, "scaler_clustering.pkl")) else None
     label_enc = joblib.load(os.path.join(MODELS_DIR, "label_encoders.pkl")) if safe_exists(os.path.join(MODELS_DIR, "label_encoders.pkl")) else None
     pca_model = joblib.load(os.path.join(MODELS_DIR, "pca_model.pkl")) if safe_exists(os.path.join(MODELS_DIR, "pca_model.pkl")) else None
-    selected_features = joblib.load(os.path.join(MODELS_DIR, "selected_features.pkl")) if safe_exists(os.path.join(MODELS_DIR, "selected_features.pkl")) else []
-    meta = {}
-    if safe_exists(os.path.join(MODELS_DIR, "meta.json")):
-        with open(os.path.join(MODELS_DIR, "meta.json"), "r", encoding="utf-8") as f:
-            meta = json.load(f)
-    return regression_model, kmeans_model, scaler_reg, scaler_clus, label_enc, pca_model, selected_features, meta
 
+    selected_features = []
+    if safe_exists(os.path.join(MODELS_DIR, "selected_features.pkl")):
+        selected_features = joblib.load(os.path.join(MODELS_DIR, "selected_features.pkl"))
+
+    if selected_features:
+        meta["selected_features"] = selected_features
+
+    return regression_model, kmeans_model, scaler_reg, scaler_clus, label_enc, pca_model, selected_features, meta
 
 def app_ready(meta, df):
     return bool(meta) and not df.empty
@@ -370,7 +390,6 @@ def create_sidebar_filters(df):
 
     return filtered
 
-
 def build_prediction_dataframe(user_inputs, label_enc, meta):
     cut_enc, color_enc, clarity_enc = encode_inputs(
         label_enc,
@@ -379,36 +398,55 @@ def build_prediction_dataframe(user_inputs, label_enc, meta):
         user_inputs["clarity"],
     )
 
-    row = {
-        "carat": user_inputs["carat"],
-        "cut_enc": cut_enc,
-        "color_enc": color_enc,
-        "clarity_enc": clarity_enc,
-        "depth": user_inputs["depth"],
-        "table": user_inputs["table"],
-        "x": user_inputs["x"],
-        "y": user_inputs["y"],
-        "z": user_inputs["z"],
-        "volume": user_inputs["volume"],
-        "price_per_carat": user_inputs["price_per_carat"],
-        "dimension_ratio": user_inputs["dimension_ratio"],
-        "surface_area": user_inputs["surface_area"],
-        "depth_table_ratio": user_inputs["depth_table_ratio"],
-        "lw_ratio": user_inputs["lw_ratio"],
-        "is_premium": user_inputs["is_premium"],
+    full_row = {
+        "carat": float(user_inputs["carat"]),
+        "cut_enc": float(cut_enc),
+        "color_enc": float(color_enc),
+        "clarity_enc": float(clarity_enc),
+        "depth": float(user_inputs["depth"]),
+        "table": float(user_inputs["table"]),
+        "x": float(user_inputs["x"]),
+        "y": float(user_inputs["y"]),
+        "z": float(user_inputs["z"]),
+        "volume": float(user_inputs["volume"]),
+        "dimension_ratio": float(user_inputs["dimension_ratio"]),
+        "surface_area": float(user_inputs["surface_area"]),
+        "depth_table_ratio": float(user_inputs["depth_table_ratio"]),
+        "lw_ratio": float(user_inputs["lw_ratio"]),
+        "is_premium": int(user_inputs["is_premium"]),
     }
 
     selected_features = meta.get("selected_features", [])
     if not selected_features:
-        selected_features = list(row.keys())
+        raise ValueError("selected_features not found in meta.json")
 
-    for feat in selected_features:
-        if feat not in row:
-            row[feat] = 0
+    missing = [feat for feat in selected_features if feat not in full_row]
+    if missing:
+        raise ValueError(f"Missing required prediction features: {missing}")
 
-    pred_df = pd.DataFrame([row])[selected_features]
-    return pred_df
+    pred_df = pd.DataFrame([[full_row[feat] for feat in selected_features]], columns=selected_features)
+    return pred_df.astype(float)
 
+def predict_price_from_inputs(user_inputs, regression_model, scaler_reg, label_enc, meta):
+    pred_df = build_prediction_dataframe(user_inputs, label_enc, meta)
+    model_name = meta.get("best_regression_model", "")
+
+    scaled_models = {"Linear Regression", "Ridge Regression", "KNN"}
+
+    if model_name in scaled_models:
+        if scaler_reg is None:
+            raise ValueError(f"Scaler is required for model '{model_name}' but was not found.")
+        model_input = scaler_reg.transform(pred_df)
+    else:
+        model_input = pred_df
+
+    pred_raw = regression_model.predict(model_input)[0]
+    pred_price = float(np.expm1(pred_raw))
+
+    if not np.isfinite(pred_price):
+        raise ValueError(f"Non-finite prediction returned: {pred_price}")
+
+    return max(pred_price, 0.0), float(pred_raw), pred_df
 
 def build_cluster_dataframe(user_inputs, label_enc, meta):
     cut_enc, color_enc, clarity_enc = encode_inputs(
@@ -770,7 +808,7 @@ def show_eda_page(df):
         with target_col:
             path = read_plot_image_path(img)
             if path:
-                st.image(path, use_container_width=True, caption=img.replace(".png", "").replace("_", " ").title())
+                st.image(path, caption=img.replace(".png", "").replace("_", " ").title())
 
     st.markdown("### Interactive Visuals")
     figs = create_interactive_eda_charts(filtered_df)
@@ -877,12 +915,12 @@ def show_model_performance_page(meta):
     c1, c2 = st.columns(2)
     with c1:
         if ann_path:
-            st.image(ann_path, use_container_width=True, caption="ANN Training History")
+            st.image(ann_path, caption="ANN Training History")
         else:
             st.plotly_chart(make_gauge(reg_metrics.get("R2", 0), "Best Model R²", 0, 1), use_container_width=True, theme=None)
     with c2:
         if fi_path:
-            st.image(fi_path, use_container_width=True, caption="Feature Importances")
+            st.image(fi_path, caption="Feature Importances")
         else:
             fig_imp = create_feature_importance_chart(meta)
             if fig_imp is not None:
@@ -892,71 +930,60 @@ def show_model_performance_page(meta):
         "The model performance view communicates both technical rigor and business readiness by combining metric transparency, benchmarking, and feature relevance."
     )
 
-
-def show_price_prediction_page(meta, regression_model, scaler_reg, label_enc):
-    st.title("💰 Price Predictor")
-
-    if regression_model is None or scaler_reg is None or label_enc is None or not meta:
-        st.warning("Prediction artifacts are missing. Run training first.")
-        return
-
-    styled_info("Enter a diamond configuration to estimate its market-aligned price in INR.")
-
-    inputs = get_user_inputs(key_prefix="pred")
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Volume", f"{inputs['volume']:.2f}")
-    c2.metric("Dimension Ratio", f"{inputs['dimension_ratio']:.3f}")
-    c3.metric("Surface Area", f"{inputs['surface_area']:.2f}")
-
     if st.button("Predict Price 💎"):
-        pred_df = build_prediction_dataframe(inputs, label_enc, meta)
-
-        scaled_features = scaler_reg.transform(pred_df)
-        model_name = meta.get("best_regression_model", "")
-
-        if model_name in ["Linear Regression", "Ridge Regression", "KNN"]:
-            pred_log = regression_model.predict(scaled_features)[0]
-        else:
-            pred_log = regression_model.predict(pred_df)[0]
-
-        pred_price = float(np.expm1(pred_log))
-        lower = pred_price * 0.90
-        upper = pred_price * 1.10
-        tier = assign_price_tier(pred_price)
-
-        st.markdown(
-            f"""
-            <div class='prediction-result'>
-                <h2 style='margin-bottom: 0.5rem;'>Predicted Price: {rupee_format(pred_price)}</h2>
-                <p style='color:#dff7e8;'>Confidence Range: {rupee_format(lower)} to {rupee_format(upper)}</p>
-                <p style='color:#dff7e8;'>Tier: <strong>{tier}</strong></p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        g1, g2 = st.columns([1.1, 1])
-        with g1:
-            st.plotly_chart(make_price_tier_gauge(pred_price), use_container_width=True, theme=None)
-        with g2:
-            comparison_df = pd.DataFrame(
-                {
-                    "Metric": ["Base Estimate", "Lower Bound", "Upper Bound", "Price / Carat"],
-                    "Value": [
-                        rupee_format(pred_price),
-                        rupee_format(lower),
-                        rupee_format(upper),
-                        rupee_format(pred_price / max(inputs["carat"], 0.001)),
-                    ],
-                }
+        try:
+            pred_price, pred_raw, pred_df = predict_price_from_inputs(
+                user_inputs=inputs,
+                regression_model=regression_model,
+                scaler_reg=scaler_reg,
+                label_enc=label_enc,
+                meta=meta,
             )
-            st.dataframe(comparison_df, use_container_width=True)
 
-        styled_info(
-            "The prediction uses engineered size, symmetry, and premium-quality indicators to estimate price on a log-transformed INR scale."
-        )
+            
 
+            lower = pred_price * 0.90
+            upper = pred_price * 1.10
+            tier = assign_price_tier(pred_price)
+
+            st.markdown(
+                f"""
+                <div class='prediction-result'>
+                    <h2 style='margin-bottom: 0.5rem;'>Predicted Price: {rupee_format(pred_price)}</h2>
+                    <p style='color:#dff7e8;'>Confidence Range: {rupee_format(lower)} to {rupee_format(upper)}</p>
+                    <p style='color:#dff7e8;'>Tier: <strong>{tier}</strong></p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            g1, g2 = st.columns([1.1, 1])
+            with g1:
+                st.plotly_chart(make_price_tier_gauge(pred_price), use_container_width=True, theme=None)
+            with g2:
+                comparison_df = pd.DataFrame(
+                    {
+                        "Metric": ["Base Estimate", "Lower Bound", "Upper Bound", "Price / Carat"],
+                        "Value": [
+                            rupee_format(pred_price),
+                            rupee_format(lower),
+                            rupee_format(upper),
+                            rupee_format(pred_price / max(inputs["carat"], 0.001)),
+                        ],
+                    }
+                )
+                st.dataframe(comparison_df, use_container_width=True)
+
+            model_name = meta.get("best_regression_model", "Unknown")
+            selected_features = meta.get("selected_features", [])
+
+            styled_info(
+                f"The prediction uses the saved {model_name} model with the exact selected feature set used during training: "
+                f"{', '.join(selected_features)}."
+            )
+
+        except Exception as e:
+            st.error(f"Prediction failed: {e}")
 
 def show_market_segment_page(meta, kmeans_model, scaler_clus, label_enc):
     st.title("🔮 Market Segment Predictor")
@@ -1010,6 +1037,86 @@ def show_market_segment_page(meta, kmeans_model, scaler_clus, label_enc):
         }
         styled_info(interpretations.get(cluster_id, "This segment represents a distinct market persona derived from unsupervised learning."))
 
+def show_price_prediction_page(meta, regression_model, scaler_reg, label_enc):
+    st.title("💰 Price Predictor")
+
+    if regression_model is None or label_enc is None or not meta:
+        st.warning("Prediction artifacts are missing. Run training first.")
+        return
+
+    styled_info("Enter a diamond configuration to estimate its market-aligned price in INR.")
+
+    inputs = get_user_inputs(key_prefix="pred")
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Volume", f"{inputs['volume']:.2f}")
+    c2.metric("Dimension Ratio", f"{inputs['dimension_ratio']:.3f}")
+    c3.metric("Surface Area", f"{inputs['surface_area']:.2f}")
+
+    if st.button("Predict Price 💎"):
+        try:
+            pred_df = build_prediction_dataframe(inputs, label_enc, meta)
+
+            model_name = meta.get("best_regression_model", "")
+            scaled_models = {"Linear Regression", "Ridge Regression", "KNN"}
+
+            if model_name in scaled_models:
+                if scaler_reg is None:
+                    raise ValueError(f"Scaler is required for model '{model_name}' but was not found.")
+                model_input = scaler_reg.transform(pred_df)
+                raw_output = regression_model.predict(model_input)[0]
+            else:
+                model_input = pred_df
+                raw_output = regression_model.predict(model_input)[0]
+
+            pred_price = float(np.expm1(raw_output))
+
+            if not np.isfinite(pred_price):
+                raise ValueError(f"Non-finite prediction returned: {pred_price}")
+
+            pred_price = max(pred_price, 0.0)
+            lower = pred_price * 0.90
+            upper = pred_price * 1.10
+            tier = assign_price_tier(pred_price)
+            
+
+            st.markdown(
+                f"""
+                <div class='prediction-result'>
+                    <h2 style='margin-bottom: 0.5rem;'>Predicted Price: {rupee_format(pred_price)}</h2>
+                    <p style='color:#dff7e8;'>Confidence Range: {rupee_format(lower)} to {rupee_format(upper)}</p>
+                    <p style='color:#dff7e8;'>Tier: <strong>{tier}</strong></p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            g1, g2 = st.columns([1.1, 1])
+            with g1:
+                st.plotly_chart(make_price_tier_gauge(pred_price), use_container_width=True, theme=None)
+            with g2:
+                comparison_df = pd.DataFrame(
+                    {
+                        "Metric": ["Base Estimate", "Lower Bound", "Upper Bound", "Price / Carat"],
+                        "Value": [
+                            rupee_format(pred_price),
+                            rupee_format(lower),
+                            rupee_format(upper),
+                            rupee_format(pred_price / max(inputs["carat"], 0.001)),
+                        ],
+                    }
+                )
+                st.dataframe(comparison_df, use_container_width=True)
+
+            selected_features = meta.get("selected_features", [])
+
+            styled_info(
+                f"The prediction uses the saved {model_name} model with the exact selected feature set used during training: "
+                f"{', '.join(selected_features)}."
+            )
+
+        except Exception as e:
+            st.error(f"Prediction failed: {e}")
 
 def show_cluster_insights_page(df, meta):
     st.title("📈 Cluster Insights")
@@ -1058,10 +1165,10 @@ def show_cluster_insights_page(df, meta):
         s1, s2 = st.columns(2)
         with s1:
             if cluster_path:
-                st.image(cluster_path, use_container_width=True, caption="Saved PCA Cluster Visual")
+                st.image(cluster_path, caption="Saved PCA Cluster Visual")
         with s2:
             if profile_path:
-                st.image(profile_path, use_container_width=True, caption="Saved Cluster Profiles")
+                st.image(profile_path, caption="Saved Cluster Profiles")
 
     styled_info("Segment-aware strategy can improve merchandising, recommendation design, and pricing differentiation across different buyer personas.")
 

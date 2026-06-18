@@ -330,8 +330,14 @@ def plot_countplots(df: pd.DataFrame):
 
 def plot_scatter_and_boxplots(df: pd.DataFrame):
     fig, ax = plt.subplots(figsize=(12, 7))
-    sns.scatterplot(data=df.sample(min(10000, len(df)), random_state=RANDOM_STATE),
-                    x="carat", y="price", alpha=0.35, color="#d4af37", ax=ax)
+    sns.scatterplot(
+        data=df.sample(min(10000, len(df)), random_state=RANDOM_STATE),
+        x="carat",
+        y="price",
+        alpha=0.35,
+        color="#d4af37",
+        ax=ax,
+    )
     ax.set_title("Carat vs Price")
     ax.set_xlabel("Carat")
     ax.set_ylabel("Price (USD)")
@@ -621,7 +627,10 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df["price_inr"] = df["price"] * USD_TO_INR
     df["volume"] = df["x"] * df["y"] * df["z"]
+
+    # Kept for EDA/business analysis only; NOT used in regression features to avoid leakage.
     df["price_per_carat"] = df["price"] / np.clip(df["carat"], 1e-8, None)
+
     df["dimension_ratio"] = (df["x"] + df["y"]) / np.clip(2 * df["z"], 1e-8, None)
     df["carat_category"] = df["carat"].apply(carat_category)
     df["surface_area"] = 2 * (
@@ -664,6 +673,7 @@ def encode_ordinal_features(df: pd.DataFrame):
 def feature_selection(df: pd.DataFrame):
     print("\n[STEP 8] Feature selection started...")
 
+    # price_per_carat intentionally excluded to prevent target leakage
     feature_cols = [
         "carat",
         "cut_enc",
@@ -675,7 +685,6 @@ def feature_selection(df: pd.DataFrame):
         "y",
         "z",
         "volume",
-        "price_per_carat",
         "dimension_ratio",
         "surface_area",
         "depth_table_ratio",
@@ -806,22 +815,33 @@ def regression_pipeline(df: pd.DataFrame, selected_features: list):
         save_keras_model(ann_model, MODELS_DIR)
         joblib.dump(scaler, MODELS_DIR / "scaler_regression.pkl")
         best_model_artifact_name = "best_ann_model.keras"
+        best_model_format = "keras"
     else:
         best_model = fitted_models[best_model_name]
-        joblib.dump(best_model, MODELS_DIR / "best_regression_model.pkl")
+
+        if best_model_name == "XGBoost":
+            best_model.save_model(str(MODELS_DIR / "best_xgboost_model.json"))
+            joblib.dump(best_model, MODELS_DIR / "best_regression_model.pkl")
+            best_model_artifact_name = "best_xgboost_model.json"
+            best_model_format = "xgboost_json"
+        else:
+            joblib.dump(best_model, MODELS_DIR / "best_regression_model.pkl")
+            best_model_artifact_name = "best_regression_model.pkl"
+            best_model_format = "joblib"
+
         joblib.dump(scaler, MODELS_DIR / "scaler_regression.pkl")
-        best_model_artifact_name = "best_regression_model.pkl"
 
     results_df.to_csv(MODELS_DIR / "regression_results.csv", index=False)
 
     return {
-        "results_df": results_df,
-        "best_model_name": best_model_name,
-        "best_model_artifact_name": best_model_artifact_name,
-        "ann_result": ann_result,
-        "history": history,
-        "scaler": scaler,
-        "X_train_columns": list(X.columns),
+    "results_df": results_df,
+    "best_model_name": best_model_name,
+    "best_model_artifact_name": best_model_artifact_name,
+    "best_model_format": best_model_format,
+    "ann_result": ann_result,
+    "history": history,
+    "scaler": scaler,
+    "X_train_columns": list(X.columns),
     }
 
 
@@ -989,14 +1009,15 @@ def save_meta(
 ):
     results_df = regression_outputs["results_df"]
     best_model_name = regression_outputs["best_model_name"]
-
+    best_model_format = regression_outputs["best_model_format"]
     best_metrics = results_df.loc[results_df["Model"] == best_model_name].iloc[0].to_dict()
     ann_row = results_df.loc[results_df["Model"] == "ANN"]
     ann_metrics = ann_row.iloc[0].to_dict() if not ann_row.empty else {}
 
     meta = {
         "best_regression_model": best_model_name,
-        "best_model_artifact_name": regression_outputs["best_model_artifact_name"],
+        "best_model_artifact_name": regression_outputs["best_model_artifact_name"], 
+        "best_model_format": best_model_format,
         "regression_metrics": {
             "R2": round(float(best_metrics["R2"]), 4),
             "RMSE_inr": round(float(best_metrics["RMSE"]), 2),
@@ -1088,23 +1109,6 @@ def main():
 
     # Step 9
     regression_outputs = regression_pipeline(df_clean, selected_features)
-
-    # Save XGBoost as default artifact name if not ANN
-    if regression_outputs["best_model_name"] != "ANN":
-        best_model = None
-        if regression_outputs["best_model_name"] == "XGBoost":
-            best_model = XGBRegressor(
-                n_estimators=300,
-                learning_rate=0.1,
-                max_depth=6,
-                subsample=0.9,
-                colsample_bytree=0.9,
-                random_state=RANDOM_STATE,
-                n_jobs=-1,
-                objective="reg:squarederror",
-            )
-        if best_model is not None:
-            pass
 
     # Step 10
     clustering_outputs = clustering_pipeline(df_clean)
